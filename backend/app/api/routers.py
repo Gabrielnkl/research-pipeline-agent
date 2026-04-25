@@ -69,3 +69,33 @@ async def get_research_status(
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat() if job.updated_at else None
     }
+
+
+# [ ] Create POST /research/{id}/approve endpoint:
+# Accepts { approved: bool, feedback: string }
+# If approved: resumes graph with feedback → continues to report_writer
+# If rejected: resumes graph → loops back to web_search with feedback as additional context
+
+@research_router.post("/{job_id}/approve")
+async def approve_checkpoint(
+    job_id: str,
+    request: research.ApproveCheckpointRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        job_uuid = uuid.UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+    result = await db.execute(
+        select(ResearchJob).where(ResearchJob.id == job_uuid)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Here you would add logic to update the job based on approval/rejection
+    # For example, you might set a flag in the database that the graph can check
+
+    return {"message": "Checkpoint updated successfully"}

@@ -10,3 +10,8 @@ class AgentState(TypedDict):
     report: Optional[str]          # Final output
     current_step: str
     confidence_score: float
+    
+    # HITL
+    human_feedback: Optional[str]
+    approved: Optional[bool]
+    retry_count: int

@@ -26,7 +26,7 @@ class ResearchJob(Base):
         default=JobStatus.pending,
         nullable=False
     )
-
+    
     subtasks = Column(JSONB, nullable=True)
     findings = Column(JSONB, nullable=True)
     report = Column(Text, nullable=True)

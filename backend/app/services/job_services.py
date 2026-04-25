@@ -1,8 +1,9 @@
-#  ] Connect graph execution to job_service.py, update DB status at each node
-# [ ] Run the full pipeline against a test question: "What are the main causes of inflation in 2024?"
+import asyncio
+import uuid
 
 from db.models import ResearchJob, JobStatus
 from graph.pipeline import ResearchPipeline
+
 
 class JobService:
     def __init__(self, db_session):
@@ -13,18 +14,34 @@ class JobService:
             question=question,
             status=JobStatus.pending
         )
+
         self.db_session.add(new_job)
         await self.db_session.commit()
         await self.db_session.refresh(new_job)
 
-        # Start the research pipeline in the background
+        # Update status → running
+        new_job.status = JobStatus.running
+        await self.db_session.commit()
+
+        # Start pipeline in background
         pipeline = ResearchPipeline()
-        await pipeline.run_pipeline(question)
+
+        asyncio.create_task(
+            pipeline.run_pipeline(
+                question=question,
+                job_id=str(new_job.id)
+            )
+        )
 
         return str(new_job.id)
 
     async def get_job_status(self, job_id: str) -> ResearchJob:
-        job = await self.db_session.get(ResearchJob, job_id)
+        job = await self.db_session.get(
+            ResearchJob,
+            uuid.UUID(job_id)
+        )
+
         if not job:
             raise ValueError("Job not found")
+
         return job
