@@ -26,11 +26,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/research/[id]/loading.js"
-    ],
-    "/research/[id]/review/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/research/[id]/review/page.js"
     ]
   }
 }

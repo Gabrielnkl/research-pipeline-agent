@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getResearchStatus, ResearchJob, AgentStep, JobStatus } from "@/lib/api";
 import { StatusBadge } from "./StatusBadge";
+import { ReportViewer } from "./ReportViewer";
 import clsx from "clsx";
 
 // Icons
@@ -55,7 +56,6 @@ function StepCard({ step, index }: { step: AgentStep; index: number }) {
       )}
       style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
     >
-      {/* Step icon */}
       <div
         className={clsx(
           "flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5",
@@ -71,7 +71,6 @@ function StepCard({ step, index }: { step: AgentStep; index: number }) {
         {isPending && <ClockIcon />}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span
@@ -123,10 +122,11 @@ export function AgentTrace({ jobId, initialJob }: Props) {
       setError(null);
 
       if (TERMINAL.includes(data.status)) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
         if (data.status === "awaiting_review") {
-          // small delay so user sees the status change before redirect
           setTimeout(() => router.push(`/research/${jobId}/review`), 800);
         }
       }
@@ -136,10 +136,13 @@ export function AgentTrace({ jobId, initialJob }: Props) {
   }, [jobId, router]);
 
   useEffect(() => {
-    poll(); // immediate first fetch
+    poll();
     intervalRef.current = setInterval(poll, 2000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, [poll]);
 
@@ -161,8 +164,10 @@ export function AgentTrace({ jobId, initialJob }: Props) {
     );
   }
 
-  const completedCount = job.steps.filter((s) => s.status === "complete").length;
-  const totalCount = job.steps.length;
+  // Always safe — default to [] if steps is undefined/null
+  const steps: AgentStep[] = job.steps ?? [];
+  const completedCount = steps.filter((s) => s.status === "complete").length;
+  const totalCount = steps.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
@@ -171,13 +176,13 @@ export function AgentTrace({ jobId, initialJob }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <StatusBadge status={job.status} />
-          {job.status === "running" && (
+          {job.status === "running" && totalCount > 0 && (
             <span className="text-xs font-mono text-[var(--text-muted)]">
               {completedCount}/{totalCount} steps
             </span>
           )}
         </div>
-        {job.status === "running" && (
+        {job.status === "running" && totalCount > 0 && (
           <div className="flex items-center gap-1.5">
             <div className="w-24 h-1 rounded-full bg-[var(--bg-card)] overflow-hidden">
               <div
@@ -211,29 +216,42 @@ export function AgentTrace({ jobId, initialJob }: Props) {
 
       {/* Step cards */}
       <div className="space-y-2">
-        {job.steps.length === 0 ? (
+        {steps.length === 0 ? (
           <div className="text-sm text-[var(--text-muted)] text-center py-8 font-mono">
             Initializing agent...
           </div>
         ) : (
-          job.steps.map((step, i) => (
-            <StepCard key={step.id} step={step} index={i} />
+          steps.map((step, i) => (
+            <StepCard key={step.id ?? i} step={step} index={i} />
           ))
         )}
       </div>
 
-      {/* Complete state */}
+      {/* Complete state — banner + report rendered here, inside the client
+          component that owns live polling state. The server-rendered page
+          only has a snapshot; this component has the final data. */}
       {job.status === "complete" && (
-        <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm text-success font-medium animate-fade-in">
-          ✓ Research complete — report ready below
-        </div>
+        <>
+          <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm text-success font-medium animate-fade-in">
+            ✓ Research complete — report ready below
+          </div>
+          {job.report ? (
+            <ReportViewer report={job.report} question={job.question} />
+          ) : (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-8 text-center text-sm text-[var(--text-muted)] font-mono animate-fade-in">
+              Report not available — the backend may not have returned it in the status response.
+            </div>
+          )}
+        </>
       )}
 
       {/* Failed state */}
-      {job.status === "failed" && job.error && (
+      {job.status === "failed" && (
         <div className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 animate-fade-in">
           <p className="text-sm text-danger font-medium mb-1">Research failed</p>
-          <p className="text-xs text-[var(--text-muted)] font-mono">{job.error}</p>
+          {job.error && (
+            <p className="text-xs text-[var(--text-muted)] font-mono">{job.error}</p>
+          )}
         </div>
       )}
     </div>
