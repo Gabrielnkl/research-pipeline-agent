@@ -5,7 +5,7 @@
 import json
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from graph.state import AgentState
+from app.graph.state import AgentState
 
 class FactCheckerAgent:
     def __init__(self):

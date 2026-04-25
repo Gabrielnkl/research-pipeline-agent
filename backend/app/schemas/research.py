@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 class JobStatus(str, Enum):
     pending          = "pending"
@@ -47,3 +47,8 @@ class ReportResponse(BaseModel):
     question:    str
     report:      str
     retry_count: int
+
+# app/schemas/research.py — add this
+class ApproveRequest(BaseModel):
+    action: Literal["approve", "reject"]
+    feedback: str = ""

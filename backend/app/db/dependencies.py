@@ -2,7 +2,7 @@
 
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgres import AsyncSessionLocal
+from app.db.postgres import AsyncSessionLocal
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -13,8 +13,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     - Yields it to the endpoint
     - Ensures it is properly closed after use
     """
-    async with AsyncSessionLocal() as session:
+    async with AsyncSessionLocal() as db:
         try:
-            yield session
+            yield db
         finally:
-            await session.close()
+            await db.close()

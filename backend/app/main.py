@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-from api.routers import research_router
-from db.postgres import engine
-from db.models import Base
+from app.api.routers import research_router
+from app.db.postgres import engine
+from app.db.models import Base
 
 # Load environment variables
 load_dotenv(override=True)
@@ -38,7 +38,7 @@ app = FastAPI(
 # Routers
 app.include_router(
     research_router,
-    prefix="/research",
+    prefix="/api/research",
     tags=["research"]
 )
 

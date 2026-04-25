@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from graph.state import AgentState
+from app.graph.state import AgentState
 
 
 class SubtasksOutput(BaseModel):

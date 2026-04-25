@@ -7,7 +7,7 @@ import json
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from graph.state import AgentState
+from app.graph.state import AgentState
 
 
 class SummarizerAgent:
