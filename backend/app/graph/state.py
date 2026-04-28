@@ -6,7 +6,6 @@ class AgentState(TypedDict):
     subtasks: List[str]            # Set by orchestrator
     findings: dict                 # keyed by subtask
     flagged_claims: List[str]      # Set by fact checker
-    human_feedback: Optional[str]  # Set after HITL
     report: Optional[str]          # Final output
     current_step: str
     confidence_score: float

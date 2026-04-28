@@ -6,8 +6,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from app.api.routers import research_router
-from app.db.postgres import engine
-from app.db.models import Base
+from app.db.postgres import engine, init_db
 
 # Load environment variables
 load_dotenv(override=True)
@@ -16,9 +15,7 @@ load_dotenv(override=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 🔥 Startup logic
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
+    await init_db()
     print("✅ Database tables ready")
 
     yield

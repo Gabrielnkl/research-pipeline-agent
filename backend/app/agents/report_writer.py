@@ -1,57 +1,34 @@
-import json
-from langchain.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from typing import List
+from pydantic import BaseModel, Field
+from langchain.agents import create_agent
 from app.graph.state import AgentState
+
+
+class ReportWriterAgentOutput(BaseModel):
+    subtasks: List[str] = Field(description="A list where the first item is the final markdown report synthesizing all findings. "
+    "The report should include sections for Executive Summary, Findings by Subtask, Flagged Claims, and Sources.")
 
 
 class ReportWriterAgent:
     def __init__(self):
-        self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
-
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are an expert research assistant tasked with synthesizing research findings into a structured markdown report."),
-
-            ("human", "Research question: {question}"),
-            ("human", "Subtasks: {subtasks}"),
-            ("human", "Summarized findings: {summarized_findings}"),
-            ("human", "Flagged claims: {flagged_claims}"),
-            ("human", "Confidence score: {confidence_score}"),
-
-            ("human",
-             "Write a comprehensive report with the following sections:\n"
-             "1. Executive Summary (2-3 sentences)\n"
-             "2. Findings by Subtask\n"
-             "3. Flagged Claims\n"
-             "4. Sources")
-        ])
-
-    async def write_report(self, state: AgentState) -> str:
-
-        # -------------------------
-        # SAFE STATE ACCESS
-        # -------------------------
-        summarized_findings = (
-            state.get("summarized_findings")
-            or state.get("summaries")
-            or state.get("findings")
-            or {}
+        self.agent = create_agent(
+            model="gpt-4o-mini",
+            response_format=ReportWriterAgentOutput
         )
-
-        flagged_claims = state.get("flagged_claims", [])
-        confidence_score = state.get("confidence_score", 1.0)
-
-        # -------------------------
-        # PROMPT
-        # -------------------------
-        messages = self.prompt.format_messages(
-            question=state.get("question", ""),
-            subtasks=json.dumps(state.get("subtasks", [])),
-            summarized_findings=json.dumps(summarized_findings),
-            flagged_claims=json.dumps(flagged_claims),
-            confidence_score=confidence_score,
-        )
-
-        response = await self.llm.ainvoke(messages)
-
-        return response.content.strip()
+    
+    async def write_report(self, state: AgentState) -> AgentState:
+        findings_section = "\n\n".join([f"### {subtask}\n{summary}" for subtask, summary in state["findings"].items()])
+        flagged_claims_section = "\n".join([f"- {claim}" for claim in state["flagged_claims"]])
+        
+        prompt = f"Write a structured markdown report based on the following information:\n\n"  \
+                 f"**Executive Summary:**\nA brief overview of the health benefits of green tea.\n\n" \
+                 f"**Findings by Subtask:**\n{findings_section}\n\n" \
+                 f"**Flagged Claims:**\n{flagged_claims_section}\n\n" \
+                 f"**Sources:**\nList the sources used for the findings."
+        result = await self.agent.ainvoke({
+            "messages": [{ "role": "user", "content": prompt }]
+        })
+        report = result["structured_response"].subtasks[0]  # ✅ correct
+        state["report"] = report  # Assuming the report is returned in the first subtask slot
+        print(f"Final Report:\n{state['report']}")
+        return state

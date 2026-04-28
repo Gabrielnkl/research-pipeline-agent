@@ -1,34 +1,25 @@
-from typing import List, cast
-from pydantic import BaseModel
+from typing import List
+from pydantic import BaseModel, Field
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
 
 from app.graph.state import AgentState
 
 
 class SubtasksOutput(BaseModel):
-    subtasks: List[str]
+    subtasks: List[str] = Field(description="A list of 3-5 subtasks that break down the main research question. " \
+    "Each subtask should be a concise, actionable research step.")
 
 
 class OrchestratorAgent:
     def __init__(self):
-        self.llm = ChatOpenAI(
+        self.agent = create_agent(
             model="gpt-4o-mini",
-            temperature=0.2
-        ).with_structured_output(SubtasksOutput)
-
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert research assistant."),
-            ("human", "Break down the question into 3-5 subtasks."),
-            ("human", "Question: {question}")
-        ])
-
-    async def plan(self, state: AgentState) -> list[str]:
-        messages = self.prompt.format_messages(
-            question=state["question"]
+            response_format=SubtasksOutput
         )
-
-        response = cast(SubtasksOutput, await self.llm.ainvoke(messages))
-
-        return response.subtasks
+    
+    async def plan(self, state: AgentState) -> list[str]:
+        result = await self.agent.ainvoke({
+            "messages": [{ "role": "user", "content": state["question"] }]
+        })
+        return result["structured_response"].subtasks

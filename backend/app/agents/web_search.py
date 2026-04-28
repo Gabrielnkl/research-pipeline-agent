@@ -1,46 +1,45 @@
-import json
-from typing import Dict, List
-
-from langchain_community.tools import DuckDuckGoSearchResults
-
 from app.graph.state import AgentState
+
+from typing import Dict, Any
+from langchain_community.tools import DuckDuckGoSearchResults
 
 
 class WebSearchAgent:
-    def __init__(self):
-        self.search_tool = DuckDuckGoSearchResults()
+    def __init__(self, max_results: int = 5):
+        self.search_tool = DuckDuckGoSearchResults(output_format="list")
+        self.max_results = max_results
 
-    async def perform_search(self, state: AgentState) -> Dict:
-        findings = {}
+    async def run(self, state: AgentState) -> dict:
+        findings: Dict[str, Any] = {}
 
         subtasks = state.get("subtasks", [])
-        question = state.get("question")
 
-        print("\n🔍 WEB SEARCH START")
-        print("Question:", question)
-        print("Subtasks:", subtasks)
-
-        # If no subtasks, fallback to main question
-        if not subtasks:
-            subtasks = [{"id": "main", "name": question}]
+        if not isinstance(subtasks, list):
+            raise ValueError(f"subtasks must be a list, got {type(subtasks)}")
 
         for subtask in subtasks:
-            # ✅ extract string query
-            query = subtask.get("name") if isinstance(subtask, dict) else str(subtask)
-
-            print(f"🔎 Searching: {query}")
-
             try:
-                results = self.search_tool.run({
-                    "query": query
-                })
+                query = str(subtask)
+
+                results = await self.search_tool.ainvoke(query)  # ✅ await first
+                results = results[:self.max_results]              # ✅ then slice
+
+                structured = {
+                    item["link"]: {
+                        "title": item.get("title", ""),
+                        "snippet": item.get("snippet", ""),
+                        "source": "duckduckgo"
+                    }
+                    for item in results
+                    if "link" in item
+                }
+
+                findings[query] = structured
+
             except Exception as e:
-                print(f"❌ Search failed for: {query}", e)
-                results = f"Error: {str(e)}"
-
-            # ✅ use string key
-            findings[query] = results
-
-        print("✅ WEB SEARCH DONE\n")
+                findings[str(subtask)] = {
+                    "error": str(e),
+                    "results": {}
+                }
 
         return findings

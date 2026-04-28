@@ -1,15 +1,12 @@
-import os
-from contextlib import contextmanager
 from langgraph.checkpoint.postgres import PostgresSaver
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
-@contextmanager
-def get_checkpointer():
-    db_url = os.getenv("CHECKPOINTER_DB_URL")
+DATABASE_URL = os.getenv("CHECKPOINT_DATABASE_URL")
 
-    if not db_url:
-        raise ValueError("CHECKPOINTER_DB_URL not set")
+if not DATABASE_URL:
+    raise ValueError("CHECKPOINT_DATABASE_URL is not set")
 
-    with PostgresSaver.from_conn_string(db_url) as saver:
-        yield saver
-
+checkpointer = PostgresSaver.from_conn_string(DATABASE_URL)
