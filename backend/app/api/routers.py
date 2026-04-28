@@ -2,14 +2,15 @@ import asyncio
 import uuid
 import traceback
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.schemas import research
-from app.db.models import ResearchJob
-from app.graph.pipeline import ResearchPipeline, graph
-
+from app.db.models import ResearchJob, JobStatus
+from app.db.postgres import get_db
+from app.services.job_services import run_pipeline_safe
+from app.db.postgres import AsyncSessionLocal
 
 research_router = APIRouter()
 
@@ -19,15 +20,16 @@ research_router = APIRouter()
 # -------------------------
 @research_router.post("/start")
 async def start_research(
-    request: research.StartResearchRequest,
+    request: Request,
+    body: research.StartResearchRequest,
     db: AsyncSession = Depends(get_db)
 ):
     print("\n📩 /start called")
 
     new_job = ResearchJob(
         id=uuid.uuid4(),
-        question=request.question,
-        status="running"
+        question=body.question,
+        status=JobStatus.running
     )
 
     db.add(new_job)
@@ -36,11 +38,11 @@ async def start_research(
 
     print(f"🆕 Job created: {new_job.id}")
 
-    pipeline = ResearchPipeline()
+    graph = request.app.state.graph
 
-    # 🚀 background execution with debug
+    # ❗ DO NOT pass db session
     asyncio.create_task(
-        run_pipeline_safe(pipeline, request.question, str(new_job.id))
+        run_pipeline_safe(body.question, str(new_job.id), graph)
     )
 
     return {"id": str(new_job.id)}
@@ -69,42 +71,80 @@ async def get_research_status(
     if not job:
         raise HTTPException(404, "Job not found")
 
-    print(f"📊 Status: {job.status} | Steps: {len(job.subtasks or [])}")
+    # ✅ Convert subtasks → AgentStep format
+    steps = [
+        {
+            "id": str(i),
+            "name": step,
+            "status": "complete" if job.status == JobStatus.complete else "running",
+        }
+        for i, step in enumerate(job.subtasks or [])
+    ]
 
     return {
         "id": str(job.id),
+        "question": job.question,
         "status": job.status.value if hasattr(job.status, "value") else job.status,
-        "steps": job.subtasks or [],
+        "steps": steps,
         "report": job.report,
         "flaggedClaims": [],
     }
 
 
 # -------------------------
+# GET FULL JOB (NEW)
+# -------------------------
+@research_router.get("/{job_id}")
+async def get_research(
+    job_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        job_uuid = uuid.UUID(job_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid job ID")
+
+    result = await db.execute(
+        select(ResearchJob).where(ResearchJob.id == job_uuid)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(404, "Job not found")
+
+    return {
+        "id": str(job.id),
+        "question": job.question,
+        "status": job.status.value if hasattr(job.status, "value") else job.status,
+        "steps": job.subtasks or [],
+        "report": job.report,
+    }
+
+
+# -------------------------
 # APPROVE (HITL)
 # -------------------------
+from langgraph.types import Command
+
 @research_router.post("/{job_id}/approve")
-async def approve_research(job_id: str, request: dict):
-    print(f"\n🧑‍⚖️ HITL approval for job_id={job_id}")
-    print(f"Approved: {request.get('approved')}")
-    print(f"Feedback: {request.get('feedback')}\n")
+async def approve_research(job_id: str, body: dict, request: Request):
+    graph = request.app.state.graph
+
+    approved = body.get("action") == "approve"
 
     try:
         await graph.ainvoke(
-            {
-                "approved": request.get("approved", True),
-                "human_feedback": request.get("feedback", ""),
-                "retry_count": 1,
-            },
-            config={
-                "configurable": {
-                    "thread_id": job_id,
-                    "job_id": job_id
+            Command(
+                resume=approved,
+                update={
+                    # ✅ ONLY extra fields here
+                    "human_feedback": body.get("feedback", ""),
                 }
-            }
+            ),
+            config={"configurable": {"thread_id": job_id}},
         )
-    except Exception as e:
-        print("❌ ERROR RESUMING GRAPH:", e)
+    except Exception:
         traceback.print_exc()
+        raise HTTPException(500, "Failed to resume graph")
 
-    return {"status": "resumed"}
+    return {"success": True}

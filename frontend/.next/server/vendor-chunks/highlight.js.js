@@ -10,17 +10,6 @@ exports.id = "vendor-chunks/highlight.js";
 exports.ids = ["vendor-chunks/highlight.js"];
 exports.modules = {
 
-/***/ "(ssr)/./node_modules/highlight.js/styles/github-dark.css":
-/*!**********************************************************!*\
-  !*** ./node_modules/highlight.js/styles/github-dark.css ***!
-  \**********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (\"f4b58925b840\");\nif (false) {}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9ub2RlX21vZHVsZXMvaGlnaGxpZ2h0LmpzL3N0eWxlcy9naXRodWItZGFyay5jc3MiLCJtYXBwaW5ncyI6Ijs7OztBQUFBLGlFQUFlLGNBQWM7QUFDN0IsSUFBSSxLQUFVLEVBQUUsRUFBdUIiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9ydWkvLi9ub2RlX21vZHVsZXMvaGlnaGxpZ2h0LmpzL3N0eWxlcy9naXRodWItZGFyay5jc3M/NjBkMSJdLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgZGVmYXVsdCBcImY0YjU4OTI1Yjg0MFwiXG5pZiAobW9kdWxlLmhvdCkgeyBtb2R1bGUuaG90LmFjY2VwdCgpIH1cbiJdLCJuYW1lcyI6W10sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./node_modules/highlight.js/styles/github-dark.css\n");
-
-/***/ }),
-
 /***/ "(ssr)/./node_modules/highlight.js/lib/core.js":
 /*!***********************************************!*\
   !*** ./node_modules/highlight.js/lib/core.js ***!

@@ -19,13 +19,17 @@
     "/research/[id]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/research/[id]/page.css",
       "static/chunks/app/research/[id]/page.js"
     ],
     "/research/[id]/loading": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/research/[id]/loading.js"
+    ],
+    "/research/[id]/review/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/research/[id]/review/page.js"
     ]
   }
 }

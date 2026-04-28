@@ -5,8 +5,7 @@ from app.graph.state import AgentState
 
 
 class ReportWriterAgentOutput(BaseModel):
-    subtasks: List[str] = Field(description="A list where the first item is the final markdown report synthesizing all findings. "
-    "The report should include sections for Executive Summary, Findings by Subtask, Flagged Claims, and Sources.")
+    report: str = Field(description="Final markdown report")
 
 
 class ReportWriterAgent:
@@ -17,18 +16,45 @@ class ReportWriterAgent:
         )
     
     async def write_report(self, state: AgentState) -> AgentState:
-        findings_section = "\n\n".join([f"### {subtask}\n{summary}" for subtask, summary in state["findings"].items()])
-        flagged_claims_section = "\n".join([f"- {claim}" for claim in state["flagged_claims"]])
-        
-        prompt = f"Write a structured markdown report based on the following information:\n\n"  \
-                 f"**Executive Summary:**\nA brief overview of the health benefits of green tea.\n\n" \
-                 f"**Findings by Subtask:**\n{findings_section}\n\n" \
-                 f"**Flagged Claims:**\n{flagged_claims_section}\n\n" \
-                 f"**Sources:**\nList the sources used for the findings."
+        findings_section = "\n\n".join([
+            f"### {subtask}\n{summary}"
+            for subtask, summary in state["findings"].items()
+        ])
+
+        flagged_claims_section = "\n".join([
+            f"- {claim}" for claim in state["flagged_claims"]
+        ])
+
+        question = state.get("question", "")
+
+        prompt = f"""
+                Write a structured markdown report.
+
+                ## Question
+                {question}
+
+                ## Findings by Subtask
+                {findings_section}
+
+                ## Flagged Claims
+                {flagged_claims_section}
+
+                ## Instructions
+                - Include Executive Summary
+                - Include Findings per subtask
+                - Include flagged claims
+                - Include sources
+                """
+
         result = await self.agent.ainvoke({
-            "messages": [{ "role": "user", "content": prompt }]
+            "messages": [{"role": "user", "content": prompt}]
         })
-        report = result["structured_response"].subtasks[0]  # ✅ correct
-        state["report"] = report  # Assuming the report is returned in the first subtask slot
-        print(f"Final Report:\n{state['report']}")
-        return state
+
+        report = result["structured_response"].report
+
+        print("🧠 GENERATED REPORT:", report[:200])
+
+        return {
+            **state,
+            "report": report
+        }

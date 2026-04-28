@@ -1,64 +1,45 @@
-import { notFound } from "next/navigation";
+// app/research/[id]/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
 import { getResearchStatus } from "@/lib/api";
 import { AgentTrace } from "@/components/AgentTrace";
-import { ReportViewer } from "@/components/ReportViewer";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ReportViewer } from "@/components/ReportViewer";
+import { useRouter } from "next/navigation";
 
-interface Props {
-  params: { id: string };
-}
+export default function ResearchPage({ params }: { params: { id: string } }) {
+  const [job, setJob] = useState<any>(null);
+  const router = useRouter();
 
-export default async function ResearchPage({ params }: Props) {
-  let job;
-  try {
-    job = await getResearchStatus(params.id);
-  } catch {
-    notFound();
-  }
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await getResearchStatus(params.id);
+        setJob(data);
+
+        if (data.status === "awaiting_review") {
+          router.push(`/research/${params.id}/review`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [params.id]);
+
+  if (!job) return <p>Loading...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      {/* Page header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <a
-            href="/"
-            className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-          >
-            ← Home
-          </a>
-          <span className="text-[var(--text-subtle)]">/</span>
-          <span className="text-xs font-mono text-[var(--text-muted)]">
-            {params.id}
-          </span>
-        </div>
-        <div className="flex items-start justify-between gap-4 mt-4">
-          <h1 className="font-display text-2xl text-[var(--text)] leading-snug flex-1">
-            {job.question}
-          </h1>
-          <div className="flex-shrink-0 mt-1">
-            <StatusBadge status={job.status} />
-          </div>
-        </div>
-        <p className="text-xs font-mono text-[var(--text-muted)] mt-2">
-          Started {new Date(job.createdAt).toLocaleString()}
-        </p>
-      </div>
+    <main className="max-w-3xl mx-auto p-6 space-y-6">
+      <StatusBadge status={job.status} />
 
-      {/* Agent trace — always shown (handles polling internally) */}
-      <section className="mb-8">
-        <h2 className="text-xs font-mono text-[var(--text-muted)] uppercase tracking-widest mb-4">
-          Agent Pipeline
-        </h2>
-        <AgentTrace jobId={params.id} initialJob={job} />
-      </section>
+      <AgentTrace steps={job.steps} />
 
-      {/* Report — shown when complete */}
       {job.status === "complete" && job.report && (
-        <section>
-          <ReportViewer report={job.report} question={job.question} />
-        </section>
+        <ReportViewer report={job.report} />
       )}
-    </div>
+    </main>
   );
 }

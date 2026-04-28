@@ -103,3 +103,67 @@ package.json
 #extras
 plan.md
 uv.lock
+
+# -----------------------------
+# Node / dependencies
+# -----------------------------
+node_modules/
+.pnpm-store/
+.npm/
+
+# -----------------------------
+# Next.js build outputs
+# -----------------------------
+.next/
+out/
+build/
+
+# -----------------------------
+# Logs
+# -----------------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------
+# Environment variables
+# -----------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# -----------------------------
+# Vercel
+# -----------------------------
+.vercel/
+
+# -----------------------------
+# TypeScript
+# -----------------------------
+*.tsbuildinfo
+next-env.d.ts
+
+# -----------------------------
+# OS / Editor junk
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# JetBrains
+.idea/
+
+# -----------------------------
+# Testing
+# -----------------------------
+coverage/
+
+# -----------------------------
+# Misc
+# -----------------------------
+*.log
