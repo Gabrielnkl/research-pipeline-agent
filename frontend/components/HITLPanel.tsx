@@ -14,7 +14,7 @@ export function HITLPanel({ jobId }: { jobId: string }) {
 
     try {
       await submitReview(jobId, {
-        approved: action === "approve", // ✅ FIXED
+        action,
         feedback,
       });
 

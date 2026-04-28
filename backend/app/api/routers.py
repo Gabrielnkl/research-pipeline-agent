@@ -126,23 +126,39 @@ async def get_research(
 # -------------------------
 from langgraph.types import Command
 
+from langgraph.types import Command
+from sqlalchemy import select
+from app.db.postgres import AsyncSessionLocal
+
 @research_router.post("/{job_id}/approve")
 async def approve_research(job_id: str, body: dict, request: Request):
     graph = request.app.state.graph
-
     approved = body.get("action") == "approve"
 
     try:
-        await graph.ainvoke(
-            Command(
-                resume=approved,
-                update={
-                    # ✅ ONLY extra fields here
-                    "human_feedback": body.get("feedback", ""),
-                }
-            ),
+        final_state = await graph.ainvoke(
+            Command(resume=approved),
             config={"configurable": {"thread_id": job_id}},
         )
+
+        print("🧠 RESUMED FINAL STATE:", final_state)
+
+        # ✅ SAVE TO DB (THIS WAS MISSING)
+        async with AsyncSessionLocal() as session:
+            job_uuid = uuid.UUID(job_id)
+
+            result = await session.execute(
+                select(ResearchJob).where(ResearchJob.id == job_uuid)
+            )
+            job = result.scalar_one_or_none()
+
+            if job:
+                job.status = JobStatus.complete
+                job.report = final_state.get("report")
+                job.subtasks = final_state.get("subtasks", [])
+                job.findings = final_state.get("findings", {})
+                await session.commit()
+
     except Exception:
         traceback.print_exc()
         raise HTTPException(500, "Failed to resume graph")

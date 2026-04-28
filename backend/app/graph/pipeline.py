@@ -60,7 +60,7 @@ async def hitl(state: AgentState) -> AgentState:
             "confidence_score": state["confidence_score"],
         })
 
-        # ✅ THIS LINE WAS MISSING / BROKEN
+        # 🔥 THIS LINE FIXES EVERYTHING
         state["approved"] = is_approved
 
         state["approved_route"] = "proceed" if is_approved else "cancel"
