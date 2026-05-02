@@ -4,12 +4,6 @@ from enum import Enum
 from datetime import datetime
 from typing import Literal, Optional
 
-class JobStatus(str, Enum):
-    pending          = "pending"
-    running          = "running"
-    awaiting_review  = "awaiting_review"
-    complete         = "complete"
-    failed           = "failed"
 
 class FindingItem(BaseModel):
     summary:    str

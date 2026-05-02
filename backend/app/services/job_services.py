@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy import select
 from app.db.models import ResearchJob, JobStatus
 from app.db.postgres import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.graph.pipeline import run_pipeline
 
 
@@ -64,3 +65,17 @@ async def run_pipeline_safe(question: str, job_id: str, graph):
             if job:
                 job.status = JobStatus.failed
                 await session.commit()
+
+
+async def create_job(db: AsyncSession, question: str) -> ResearchJob:
+    new_job = ResearchJob(
+        id=uuid.uuid4(),
+        question=question,
+        status=JobStatus.running
+    )
+
+    db.add(new_job)
+    await db.commit()
+    await db.refresh(new_job)
+
+    return new_job

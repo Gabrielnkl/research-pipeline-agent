@@ -6,10 +6,14 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.schemas import research
+from langgraph.types import Command
+from sqlalchemy import select
+
+from app.schemas.research import (StartResearchRequest, StartResearchResponse,
+    JobStatusResponse, ReportResponse, ApproveRequest)
 from app.db.models import ResearchJob, JobStatus
 from app.db.postgres import get_db
-from app.services.job_services import run_pipeline_safe
+from app.services.job_services import run_pipeline_safe, create_job
 from app.db.postgres import AsyncSessionLocal
 
 research_router = APIRouter()
@@ -21,20 +25,12 @@ research_router = APIRouter()
 @research_router.post("/start")
 async def start_research(
     request: Request,
-    body: research.StartResearchRequest,
+    body: StartResearchRequest,
     db: AsyncSession = Depends(get_db)
 ):
     print("\n📩 /start called")
 
-    new_job = ResearchJob(
-        id=uuid.uuid4(),
-        question=body.question,
-        status=JobStatus.running
-    )
-
-    db.add(new_job)
-    await db.commit()
-    await db.refresh(new_job)
+    new_job = await create_job(db, body.question)
 
     print(f"🆕 Job created: {new_job.id}")
 
@@ -94,7 +90,7 @@ async def get_research_status(
 # -------------------------
 # GET FULL JOB (NEW)
 # -------------------------
-@research_router.get("/{job_id}")
+@research_router.get("/{job_id}", response_model=JobStatusResponse)
 async def get_research(
     job_id: str,
     db: AsyncSession = Depends(get_db)
@@ -112,24 +108,18 @@ async def get_research(
     if not job:
         raise HTTPException(404, "Job not found")
 
-    return {
-        "id": str(job.id),
-        "question": job.question,
-        "status": job.status.value if hasattr(job.status, "value") else job.status,
-        "steps": job.subtasks or [],
-        "report": job.report,
-    }
+    return JobStatusResponse(
+        job_id=str(job.id),
+        question=job.question,
+        status=job.status.value if hasattr(job.status, "value") else job.status,
+        subtasks=job.subtasks or [],
+        report=job.report,
+    )
 
 
 # -------------------------
 # APPROVE (HITL)
 # -------------------------
-from langgraph.types import Command
-
-from langgraph.types import Command
-from sqlalchemy import select
-from app.db.postgres import AsyncSessionLocal
-
 @research_router.post("/{job_id}/approve")
 async def approve_research(job_id: str, body: dict, request: Request):
     graph = request.app.state.graph

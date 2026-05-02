@@ -13,13 +13,12 @@ const EXAMPLES = [
 
 export function ResearchForm() {
   const [question, setQuestion] = useState("");
+  const [focused, setFocused] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); // ✅ VERY IMPORTANT
-
+    e.preventDefault();
     if (!question.trim()) return;
-
     try {
       const res = await startResearch(question);
       router.push(`/research/${res.id}`);
@@ -29,43 +28,50 @@ export function ResearchForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <textarea
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Ask a research question..."
-        className="w-full p-3 rounded-md border 
-                   bg-gray-900 text-white 
-                   placeholder-gray-400"
-      />
+    <form onSubmit={handleSubmit} className="research-form">
+      <div className={`textarea-wrapper ${focused ? "focused" : ""}`}>
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="Ask a research question..."
+          rows={4}
+          className="research-textarea"
+        />
+        <div className="textarea-corner" />
+      </div>
 
-      {/* Examples */}
-      <div className="space-y-2">
-        <p className="text-sm text-gray-400">Try an example:</p>
-
-        <div className="flex flex-wrap gap-2">
+      <div className="examples-section">
+        <p className="examples-label">
+          <span className="examples-label-line" />
+          Try an example
+          <span className="examples-label-line" />
+        </p>
+        <div className="examples-grid">
           {EXAMPLES.map((example, idx) => (
             <button
               key={idx}
-              type="button" // ✅ IMPORTANT (prevents form submit)
+              type="button"
               onClick={() => setQuestion(example)}
-              className="px-3 py-1 rounded-full text-sm
-                         bg-gray-800 text-white
-                         hover:bg-gray-700"
+              className="example-chip"
             >
+              <span className="example-chip-icon">↗</span>
               {example}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Submit */}
-      <button
-        type="submit" // ✅ MUST be submit
-        className="px-4 py-2 bg-blue-600 rounded-md text-white"
-      >
-        Start Research
-      </button>
+      <div className="submit-row">
+        <span className="char-count">{question.length} chars</span>
+        <button type="submit" disabled={!question.trim()} className="submit-btn">
+          <span>Begin Research</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
     </form>
   );
 }
